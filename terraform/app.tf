@@ -1,9 +1,13 @@
+data "aws_iam_role" "ecs_task_execution_role" {
+  name = "ecsTaskExecutionRole"
+}
 resource "aws_ecs_task_definition" "app" {
   family                   = "app"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "${var.fargate_cpu}"
   memory                   = "${var.fargate_memory}"
+  execution_role_arn       = "${data.aws_iam_role.ecs_task_execution_role.arn}"
 
   container_definitions = <<DEFINITION
 [
