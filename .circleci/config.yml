@@ -6,16 +6,16 @@ workflows:
   build-and-deploy:
     jobs:
       - aws-ecr/build_and_push_image:
-          name: Build and Push Image
+          name: build_and_push_image
           account-url: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
           repo: "${AWS_RESOURCE_NAME_PREFIX}/${APP_NAME}"
           region: ${AWS_DEFAULT_REGION}
           tag: "${CIRCLE_SHA1}"
       - aws-ecs/deploy-service-update:
-          name: Deploy to Prod
+          name: deploy-service-to-prod
           context: prod-context
           requires:
-            - aws-ecr/build_and_push_image
+            - build_and_push_image
           aws-region: ${AWS_DEFAULT_REGION}
           family: "${APP_FAMILIY_NAME}"
           service-name: "${SERVICE_NAME}"
@@ -34,10 +34,10 @@ workflows:
             only:
               - master
       - aws-ecs/deploy-service-update:
-          name: Deploy to Dev
+          name: deploy-service-to-dev
           context: dev-context
           requires:
-            - aws-ecr/build_and_push_image
+            - build_and_push_image
           aws-region: ${AWS_DEFAULT_REGION}
           family: "${APP_FAMILIY_NAME}"
           service-name: "${SERVICE_NAME}"
