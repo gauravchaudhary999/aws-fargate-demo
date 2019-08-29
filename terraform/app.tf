@@ -25,7 +25,7 @@ DEFINITION
 }
 resource "aws_ecs_service" "main" {
   name            = "tf-ecs-service"
-  cluster         = "${aws_ecs_cluster.main.id}"
+  cluster         = "${aws_ecs_cluster.fargate-demo.id}"
   task_definition = "${aws_ecs_task_definition.app.arn}"
   desired_count   = "${var.app_count}"
   launch_type     = "FARGATE"
@@ -43,5 +43,6 @@ resource "aws_ecs_service" "main" {
 
   depends_on = [
     "aws_alb_listener.front_end",
+    "aws_ecs_cluster.fargate-demo"
   ]
 }
