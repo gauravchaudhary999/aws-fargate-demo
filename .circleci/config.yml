@@ -6,11 +6,36 @@ workflows:
   build-and-deploy:
     jobs:
       - aws-ecr/build_and_push_image:
+          name: Build and Push Image
           account-url: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
           repo: "${AWS_RESOURCE_NAME_PREFIX}/${APP_NAME}"
           region: ${AWS_DEFAULT_REGION}
           tag: "${CIRCLE_SHA1}"
       - aws-ecs/deploy-service-update:
+          name: Deploy to Prod
+          context: prod-context
+          requires:
+            - aws-ecr/build_and_push_image
+          aws-region: ${AWS_DEFAULT_REGION}
+          family: "${APP_FAMILIY_NAME}"
+          service-name: "${SERVICE_NAME}"
+          cluster-name: "${AWS_CLUSTER_NAME}"
+          container-image-name-updates: "container=${APP_CONTAINER_NAME},image-and-tag=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${AWS_RESOURCE_NAME_PREFIX}/${APP_NAME}:${CIRCLE_SHA1}"
+          verify-revision-is-deployed: true
+          post-steps:
+            - run:
+                name: Test the deployment
+                command: |
+                  TARGET_GROUP_ARN=$(aws ecs describe-services --cluster ${AWS_CLUSTER_NAME} --services ${SERVICE_NAME} | jq -r '.services[0].loadBalancers[0].targetGroupArn')
+                  ELB_ARN=$(aws elbv2 describe-target-groups --target-group-arns $TARGET_GROUP_ARN | jq -r '.TargetGroups[0].LoadBalancerArns[0]')
+                  ELB_DNS_NAME=$(aws elbv2 describe-load-balancers --load-balancer-arns $ELB_ARN | jq -r '.LoadBalancers[0].DNSName')
+                  curl -s --retry 10 http://$ELB_DNS_NAME | grep "Welcome to nginx!"
+          branches:
+            only:
+              - master
+      - aws-ecs/deploy-service-update:
+          name: Deploy to Dev
+          context: dev-context
           requires:
             - aws-ecr/build_and_push_image
           aws-region: ${AWS_DEFAULT_REGION}
